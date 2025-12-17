@@ -2,14 +2,10 @@
 """
 
 from numpy import ones, finfo, arange, abs, zeros
-from numpy import flatnonzero as find
 
 from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 
-from pypower.idx_bus import VM, VA, PD, QD
-from pypower.idx_gen import GEN_BUS, GEN_STATUS, PG, QG, QMIN, QMAX
-from pypower.idx_brch import F_BUS, T_BUS, BR_STATUS, PF, PT, QF, QT
 
 eps = finfo(float).eps
 
@@ -78,18 +74,18 @@ def dcnetworkpf(Ybusdc, Vdc, Pdc, slack, noslack, droop, PVdroop, Pdcset, \
 
     ## convergence print
     if not converged:
-        stdout.write('\nDC network power flow did NOT converge after %d iterations\n', it)
+        print('\nDC network power flow did NOT converge after %d iterations\n', it)
 
 
     ##----- Output update -----
     ## recalculate slack bus powers
     Vdc = Vdc.reshape((nb,1)) # Reshape in order to do the matrix multiplication    
-    Pdc1[slack] = pol*Vdc[slack]*(Ybusdc[slack,:]@Vdc);
+    Pdc1[slack] = (pol * Vdc[slack] * (Ybusdc[slack, :] @ Vdc)).flatten()
     Pdc[slack]  = -Pdc1[slack]
 
     ## recalculate voltage droop bus powers
-    Pdc1[droop]        = pol*Vdc[droop]*(Ybusdc[droop,:]@Vdc);
-    Pdc[droop]         = -Pdc1[droop];  
+    Pdc1[droop] = (pol * Vdc[droop] * (Ybusdc[droop, :] @ Vdc)).flatten()
+    Pdc[droop]         = -Pdc1[droop]
     Vdc = Vdc.reshape(nb) # Switch back to the original shape
     
     return Vdc, Pdc

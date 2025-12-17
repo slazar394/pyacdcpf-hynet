@@ -8,6 +8,9 @@ from pypower.idx_bus import ZONE, BUS_I, BUS_TYPE, REF
 from pypower.idx_gen import GEN_BUS
 from pypower.idx_brch import F_BUS, T_BUS
 
+import numpy as np
+
+
 def zonecheck(bus, gen, branch, i2eac, output):
     """
     Check for non-synchronized ac zones.
@@ -25,7 +28,7 @@ def zonecheck(bus, gen, branch, i2eac, output):
 
     if aczones.shape[0] > 1 :
         if output:
-            stdout.write('Non-synchronised zones: %d AC zones detected.'%aczones.size)
+            print('Non-synchronised zones: %d AC zones detected.'%aczones.size)
 
     ## check interzonal connections
     branchzone = c_[bus[[where(bus[:,BUS_I]==x)[0][0] for x in branch[:,F_BUS]],ZONE],\
@@ -34,8 +37,8 @@ def zonecheck(bus, gen, branch, i2eac, output):
 
     if branchconfl.sum() != 0:
         brconfl = c_[branch[branchconfl,F_BUS].astype(int), branch[branchconfl,T_BUS].astype(int)]
-        stdout.write('\nRemove branch between buses %d and %d.\n', i2eac[brconfl,0], i2eac[brconfl,1])
-        stderr.write('Connection between different AC zones detected.\n')
+        print('\nRemove branch between buses %d and %d.\n', i2eac[brconfl,0], i2eac[brconfl,1])
+        print('Connection between different AC zones detected.\n')
 
     ## check for one ac slack bus (with a generator) in every zone
     ##  addition to original matpower code to avoid that MATPOWER takes a
@@ -52,28 +55,28 @@ def zonecheck(bus, gen, branch, i2eac, output):
             zone_noslack = setdiff1d(aczones, acslackz)
             zone_noslack_noinf = setdiff1d(zone_noslack, acinfz)
             if not zone_noslack_noinf.size == 0:
-                stdout.write('\nNo AC slack bus detected in AC zone %d.\n'% zone_noslack_noinf)
-                stderr.write('Define an AC slack bus for every non-synchronized zone!\n')
+                print('\nNo AC slack bus detected in AC zone %d.\n'% zone_noslack_noinf)
+                print('Define an AC slack bus for every non-synchronized zone!\n')
         ## multiple slack buses in ac zone
         elif acslackz.shape[0] > aczones.shape[0] :
             ## could also be 2 in one zone
             acslackzs = sort(acslackz)
             multslack = acslackzs[(acslackzs == roll(acslackzs, 1))]
-            stdout.write('\nMultiple AC slack bus detected in AC zone %d.\n'% multslack)
-            stderr.write('Reduce number of AC slack buses to 1 for every non-synchronized zone!')
+            print('\nMultiple AC slack bus detected in AC zone %d.\n'% multslack)
+            print('Reduce number of AC slack buses to 1 for every non-synchronized zone!')
     else:
         ## length(acslackz) == length(aczones) %% check for multiple ac slack buses in one zone and inf bus zones
-        if acinf:
+        if acinf.size > 0:
             acslackzs = sort(acslackz)
             multslack = acslackzs[(acslackzs == roll(acslackzs, 1))]
             if multslack.shape[0] > 1:
-                stdout.write('\nMultiple AC slack bus detected in AC zone %d.\n'% multslack)
-                stderr.write('Reduce number of AC slack buses to 1 for every non-synchronized zone!')
+                print('\nMultiple AC slack bus detected in AC zone %d.\n'% multslack)
+                print('Reduce number of AC slack buses to 1 for every non-synchronized zone!')
 
     ## check  for a generator for every slack bus
     if not nogenslack.size == 0:
-        stdout.write('\nAC slack bus without generator at bus %d.\n', i2eac[nogenslack])
-        stderr.write('Add a generator for every AC slack bus!')
+        print('\nAC slack bus without generator at bus %d.\n', i2eac[nogenslack])
+        print('Add a generator for every AC slack bus!')
 
 
     ## check for connections to infinite buses
@@ -81,26 +84,26 @@ def zonecheck(bus, gen, branch, i2eac, output):
     tbusinf = intersect1d(branch[:,T_BUS], acinf)
     brchinf = r_[fbusinf, tbusinf]
     if not brchinf.size == 0:
-        stdout.write('\n Connection with an infinite bus at bus %d.\n', i2eac[brchinf])
-        stderr.write('Remove connections to infinite buses!')
+        print('\n Connection with an infinite bus at bus %d.\n', i2eac[brchinf])
+        print('Remove connections to infinite buses!')
 
 
     ## check for one infinite bus in every zone (without other buses)
     busi = where(bus[:,BUS_I])[0]
-    ## bus number of dc busses
+    ## bus number of dc buses
     acninf = setdiff1d(busi, acinf).astype(int)
     acninfz = sort(bus[acninf,ZONE])
     conflinfz = intersect1d(acinfz, acninfz)
 
-    if conflinfz:
-        stdout.write('\n Infinite buses and regular buses detected in zone %d.\n', conflinfz)
-        stderr.write('Remove infinite or regular buses!')
+    if conflinfz.size > 0:
+        print('\n Infinite buses and regular buses detected in zone %d.\n', conflinfz)
+        print('Remove infinite or regular buses!')
 
 
     ## check for multiple infinute buses in 1 AC zone
     multinf = acinfz[(acinfz == roll(acinfz, 1))]
     if multinf.shape[0] > 1:
-        stdout.write('\nMultiple infinite buses detected in AC zone %d.\n', np.unique(multinf))
-        stderr.write('Reduce number of infinite buses to 1 for every non-synchronized zone!')
+        print('\nMultiple infinite buses detected in AC zone %d.\n', np.unique(multinf))
+        print('Reduce number of infinite buses to 1 for every non-synchronized zone!')
 
     return

@@ -21,9 +21,9 @@ PYACDCPF depends upon:
 * NumPy_ 1.0 or later and
 * SciPy_ 0.9 or later.
 
-It can be installed after unpacking the package using::
+To install the package, simply run::
 
-  $ python setup.py install
+  $ pip install .
 
 
 Using PYACDCPF

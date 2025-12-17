@@ -9,7 +9,7 @@ from time import time
 
 from numpy import r_, c_,  zeros, pi, exp, where, inf, equal, not_equal,\
                  setdiff1d, arange, intersect1d, union1d, sqrt, sort,\
-                 unique, real, imag, conj, delete, complex, abs, angle, \
+                 unique, real, imag, conj, delete, abs, angle, \
                  argmax
 
 from pypower.loadcase import loadcase
@@ -50,6 +50,8 @@ from pyacdcpf.calcslackdroop import calcslackdroop
 from pyacdcpf.printdcpf import printdcpf
 from pyacdcpf.printpf import printpf # Small adaptation was made in order to support inf network
 
+
+import numpy as np
 
 ## define j
 ## DONT USE j IN ANYWHERE ELSE!!!
@@ -536,7 +538,7 @@ def runacdcpf(caseac=None, casedc=None, pacdcopt=None, ppopt=None):
                     dSiimaxi = []
 
                 ## Remove voltage control on violated converter
-                if convdc[dSiimaxi, CONVTYPE_AC]==PVC:
+                if convdc[dSiimaxi, CONVTYPE_AC].size > 0 and convdc[dSiimaxi, CONVTYPE_AC] == PVC:
                     convdc[dSiimaxi, CONVTYPE_AC] = PQC
                     stdout.write('  Voltage control at converter bus %d removed.\n'% i2edc[dSiimaxi+1])
 
@@ -557,7 +559,7 @@ def runacdcpf(caseac=None, casedc=None, pacdcopt=None, ppopt=None):
                         genPQi = delete(genPQi,dSidx)
 
                 ## Remove droop control on violated converter
-                if convdc[dSiimaxi, CONVTYPE_DC]==DCDROOP:
+                if convdc[dSiimaxi, CONVTYPE_DC].size > 0 and convdc[dSiimaxi, CONVTYPE_DC]==DCDROOP:
                    convdc[dSiimaxi, CONVTYPE_DC] = DCNOSLACK
                    droopdc = setdiff1d(droopdc,dSiimaxi) ## remove converter from droop converters
                    slackdroopdc = setdiff1d(slackdroopdc,dSiimaxi) ## remove converter from slack/droop converters (additional loss iteration)
@@ -781,13 +783,6 @@ def runacdcpf(caseac=None, casedc=None, pacdcopt=None, ppopt=None):
     resultsdc['convdc'] = convdc
     resultsdc['branchdc'] = branchdc
 
-    # if nargout == 2 || nargout == 3 || nargout == 4
-        # baseMVA = resultsac;
-        # bus = resultsdc;
-        # gen = converged;
-        # branch =  timecalc;
-    # end
-    input()
     return resultsac, resultsdc, converged, timecalc
 
 if __name__ == '__main__':

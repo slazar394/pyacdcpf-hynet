@@ -32,6 +32,7 @@ from pyacdcpf.idx_convdc import CONV_BUS, CONVSTATUS, CONVTYPE_DC, DCSLACK,\
 from pyacdcpf.pacdcoption import pacdcoption
 from pyacdcpf.loadcasedc import loadcasedc
 from pyacdcpf.convout import convout
+from pyacdcpf.convdcdcout import convdcdcout
 from pyacdcpf.brchdcout import brchdcout
 from pyacdcpf.brchout import brchout
 from pyacdcpf.ext2intdc import ext2intdc
@@ -150,6 +151,10 @@ def runacdcpf(caseac=None, casedc=None, pacdcopt=None, ppopt=None):
     pdc, conv0busi, conv1, conv1i, conv0, conv0i = convout(pdc)
     pdc['convdc'] = conv1 # only use converters without outage
 
+    ## Handle DC-DC converter outages (NEW)
+    pdc, convdcdc1, convdcdc1i, convdcdc0, convdcdc0i = convdcdcout(pdc)
+    pdc['convdcdc'] = convdcdc1  # Only use working DC-DC converters
+
     ## dc branch outages (remove branches from input data)
     brchdc1, brchdc1i, brchdc0, brchdc0i = brchdcout(pdc)
     pdc['branchdc'] = brchdc1 # only include branches in operation
@@ -207,9 +212,9 @@ def runacdcpf(caseac=None, casedc=None, pacdcopt=None, ppopt=None):
     baseMVA, bus, gen, branch = \
         ppc["baseMVA"], ppc["bus"], ppc["gen"], ppc["branch"]
 
-    baseMVAac, baseMVAdc, pol, busdc, convdc, branchdc = \
+    baseMVAac, baseMVAdc, pol, busdc, convdc, branchdc, convdcdc = \
         pdc["baseMVAac"], pdc["baseMVAdc"], pdc["pol"], \
-        pdc["busdc"], pdc["convdc"], pdc["branchdc"]
+        pdc["busdc"], pdc["convdc"], pdc["branchdc"], pdc['convdcdc']
 
     ##-----  Violation check  -----
     ## dc slack bus and distributed voltage bus violation check
@@ -353,7 +358,7 @@ def runacdcpf(caseac=None, casedc=None, pacdcopt=None, ppopt=None):
 
     ##-----  initialisation of dc network quantities -----
     ## build dc bus matrix
-    Ybusdc, Yfdc, Ytdc = makeYbusdc( busdc, branchdc )
+    Ybusdc, Yfdc, Ytdc = makeYbusdc( busdc, branchdc, convdcdc)
 
     ## detect ac islands errors (non-synchronised zones => to be solved independently)
     zonecheck(bus, gen, branch, i2eac, output)
@@ -742,6 +747,14 @@ def runacdcpf(caseac=None, casedc=None, pacdcopt=None, ppopt=None):
     pdc['convdc'][conv1i, :] = conv1
     if conv0busi.shape[0]>0:
         pdc['busdc'][conv0busi[:,0], BUSAC_I] = conv0busi[:,1]
+
+    ## Restore DC-DC converter outages (NEW)
+    if convdcdc0i.size > 0:
+        convdcdc1 = pdc['convdcdc']
+        convdcdc0 = c_[convdcdc0, zeros((convdcdc0.shape[0],
+                                         convdcdc1.shape[1] - convdcdc0.shape[1]))]
+        pdc['convdcdc'][convdcdc0i, :] = convdcdc0
+        pdc['convdcdc'][convdcdc1i, :] = convdcdc1
 
     ## dc branch outages inclusion
     brchdc1 = pdc['branchdc']

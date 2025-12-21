@@ -7,6 +7,8 @@ from numpy import gradient, sort, where, unique, any, arange, c_, r_, zeros
 from pyacdcpf.idx_busdc import GRIDDC, BUSAC_I, BUSDC_I
 from pyacdcpf.idx_convdc import CONV_BUS
 from pyacdcpf.idx_brchdc import F_BUSDC, T_BUSDC
+from pyacdcpf.idx_convdcdc import C_BUSDC, M_BUSDC
+
 
 def int2extdc(i2edcpmt, i2edc, pdc):
     """
@@ -25,6 +27,11 @@ def int2extdc(i2edcpmt, i2edc, pdc):
     pdc['convdc'][:, CONV_BUS]  = i2edc[ pdc['convdc'][:, CONV_BUS].astype(int)  ]
     pdc['branchdc'][:, F_BUSDC] = i2edc[ pdc['branchdc'][:, F_BUSDC].astype(int) ]
     pdc['branchdc'][:, T_BUSDC] = i2edc[ pdc['branchdc'][:, T_BUSDC].astype(int) ]
+
+    ## Renumber DC-DC converter buses back to external
+    if 'convdcdc' in pdc and pdc['convdcdc'] is not None and pdc['convdcdc'].size > 0:
+        pdc['convdcdc'][:, C_BUSDC] = i2edc[pdc['convdcdc'][:, C_BUSDC].astype(int)]
+        pdc['convdcdc'][:, M_BUSDC] = i2edc[pdc['convdcdc'][:, M_BUSDC].astype(int)]
 
     ## Part 2: Change bus order of busdc matrix
     pdc['busdc'][i2edcpmt,:] = pdc['busdc']

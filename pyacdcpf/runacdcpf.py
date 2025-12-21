@@ -256,7 +256,13 @@ def runacdcpf(caseac=None, casedc=None, pacdcopt=None, ppopt=None):
     convdc[:,QCONV] *= convdc[:,CONVTYPE_AC] == PQC
     if not vconfl.size == 0:
         stdout.write('Generator & VSC converter on the same bus')
-        stdout.write('\n   Conflicting voltage control on bus %d' %(i2eac[vconfl+1]))
+        # FIX: Handle both single and multiple conflicting buses
+        conflict_buses = i2eac[vconfl + 1]
+        if conflict_buses.size == 1:
+            stdout.write('\n   Conflicting voltage control on bus %d' % int(conflict_buses[0]))
+        else:
+            bus_list = ', '.join(str(int(b)) for b in conflict_buses)
+            stdout.write('\n   Conflicting voltage control on buses %s' % bus_list)
         stdout.write('\n=> Corresponding VSC Converter set to PQ control without Q injections.\n')
 
     ##-----  initialisation ac network  -----
@@ -272,7 +278,7 @@ def runacdcpf(caseac=None, casedc=None, pacdcopt=None, ppopt=None):
     Pcmax_dum   =  99999
 
     ## dummy generator addition
-    for ii in arange(convdc.shape[0]):
+    for ii in bdci:
         ## change control from PQ to PV for buses with converter in PV control
         if bus[ii,BUS_TYPE] == PQ and convdc[ii,CONVTYPE_AC] == PVC:
             busVSC[ii,BUS_TYPE] = PV

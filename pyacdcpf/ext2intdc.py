@@ -1,4 +1,5 @@
-"""Converts dc external to internal bus numbering.
+"""
+Converts dc external to internal bus numbering.
 """
 import sys
 
@@ -7,16 +8,17 @@ from numpy import gradient, sort, where, unique, any, arange, c_, r_, zeros
 from pyacdcpf.idx_busdc import GRIDDC, BUSAC_I, BUSDC_I
 from pyacdcpf.idx_convdc import CONV_BUS
 from pyacdcpf.idx_brchdc import F_BUSDC, T_BUSDC
+from pyacdcpf.idx_convdcdc import C_BUSDC, M_BUSDC
 
 def ext2intdc(pdc):
     """
     Converts dc external to internal bus numbering.
-    
+
     Converts external dc bus numbers (possibly non-consecutive) to
     consecutive internal bus numbers, starting at 1.
 
     @author:Jef Beerten (KU Leuven)
-    @author:Roni Irnawan (Aalborg University)    
+    @author:Roni Irnawan (Aalborg University)
     """
 
     ##-----  Check grid numbering -----
@@ -48,5 +50,10 @@ def ext2intdc(pdc):
     pdc['convdc'][:, CONV_BUS]  = e2idc[ pdc['convdc'][:, CONV_BUS].astype(int)  ]
     pdc['branchdc'][:, F_BUSDC] = e2idc[ pdc['branchdc'][:, F_BUSDC].astype(int) ]
     pdc['branchdc'][:, T_BUSDC] = e2idc[ pdc['branchdc'][:, T_BUSDC].astype(int) ]
+
+    ## Renumber DC-DC converter buses
+    if 'convdcdc' in pdc and pdc['convdcdc'] is not None and pdc['convdcdc'].size > 0:
+        pdc['convdcdc'][:, C_BUSDC] = e2idc[ pdc['convdcdc'][:, C_BUSDC].astype(int) ]
+        pdc['convdcdc'][:, M_BUSDC] = e2idc[ pdc['convdcdc'][:, M_BUSDC].astype(int) ]
 
     return i2edcpmt, i2edc, pdc

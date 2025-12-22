@@ -93,7 +93,11 @@ def loadcasedc(casefiledc, return_as_obj=True):
                     lasterr = str(e)
             elif extension == '.py':      ## from Python file
                 try:
-                    exec(compile(open(rootname + extension).read(), rootname + extension, 'exec'))
+                    if PY2:
+                        execfile(rootname + extension)
+                    else:
+                        exec(compile(open(rootname + extension).read(),
+                                     rootname + extension, 'exec'))
 
                     try:                      ## assume it returns an object
                         s = eval(fname)()
@@ -152,17 +156,17 @@ def loadcasedc(casefiledc, return_as_obj=True):
                 else:
                     pdc['version'] = '2'
 
-            ## FIX: Initialize convdcdc if not present (backward compatibility)
-            if 'convdcdc' not in pdc or pdc['convdcdc'] is None:
-                pdc['convdcdc'] = array([])
-
+            #if (pdc['version'] == '1'):
+                # convert from version 1 to version 2
+                # currently do nothing
+                
     if info == 0:  # no errors
         ## add voltage droop parameters if not defined in input files
         if pdc['convdc'].shape[1] < 24:
             shift = 24-pdc['convdc'].shape[1]
             tmp = zeros((pdc['convdc'].shape[0], shift))
             pdc['convdc'] = c_[ pdc['convdc'], tmp ]
-
+        
         if return_as_obj:
             return pdc
         else:

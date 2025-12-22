@@ -30,29 +30,22 @@ def ext2intac(pdc,ppc):
     acdum_i = where(pdc['busdc'][:,BUSAC_I] == 0)[0]
     accnv_i = where(pdc['busdc'][:,BUSAC_I] )[0]
     accnv = pdc['busdc'][accnv_i,BUSAC_I]
-
-    ## FIX: Use unique AC buses for calculations to handle multiple converters per AC bus
-    accnv_unique = unique(accnv)
-    acnocnv = setdiff1d(ppc['bus'][:,BUS_I], accnv_unique)
-
-    ## FIX: Only assign as many dummy buses as available
-    num_dummy_needed = acdum_i.shape[0]
-    num_dummy_avail = min(num_dummy_needed, acnocnv.shape[0])
-    acdum = acnocnv[:num_dummy_avail]
-    acnodum = acnocnv[num_dummy_avail:]
+    acnocnv = setdiff1d(ppc['bus'][:,BUS_I],accnv)
+    acdum = acnocnv[:acdum_i.shape[0]]
+    acnodum = acnocnv[acdum_i.shape[0]:]
 
     ## check presence of multiple converters on ac busses
     if accnv.shape[0] != unique(accnv).shape[0] :
         sys.stderr.write('More than one converter per ac node detected!\n')
 
     ## define index matrices
-    i2eac = r_[accnv_unique,acdum,acnodum].astype(int)
+    i2eac = r_[accnv,acdum,acnodum].astype(int)
     e2iac = zeros(max(i2eac) + 1)
     e2iac[i2eac] = arange(1,ppc['bus'].shape[0]+1)
     i2eac = r_[[0],i2eac]
 
-    ## dummy ac bus additions to busdc matrix (only for available dummies)
-    pdc['busdc'][acdum_i[:num_dummy_avail],BUSAC_I] = acdum
+    ## dummy ac bus additions to busdc matrix
+    pdc['busdc'][acdum_i,BUSAC_I] = acdum
 
     ## rename ac busses
     pdc['busdc'][:, BUSAC_I] = e2iac[pdc['busdc'][:, BUSAC_I].astype(int)]

@@ -58,12 +58,12 @@ def cigre_b4_dc():
 
     # DC/DC converter data
     # cbusdc    mbusdc  d_ratio r_dcdc  g_dcdc  ratedc_dcdc l_dcdc  c_dcdc  status_dcdc
-    pdc['convdcdc'] = array(
-        [
-            [36, 35, 0.99595, 0.012, 0.00025, 20, 0, 0, 1],
-            [25, 34, 0.50280, 0.012, 0.00025, 10, 0, 0, 1]
-        ]
-    )
+    # pdc['convdcdc'] = array(
+    #     [
+    #         [36, 35, 0.99595, 0.012, 0.00025, 20, 0, 0, 1],
+    #         [25, 34, 0.50280, 0.012, 0.00025, 10, 0, 0, 1]
+    #     ]
+    # )
 
     # DC branch data
     # fbusdc    tbusdc  r   l   c   rateA   rateB   rateC   status

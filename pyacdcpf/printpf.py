@@ -177,9 +177,9 @@ def printpf(baseMVA, bus=None, gen=None, branch=None, f=None, success=None,
     if OUT_ANY:
         ## convergence & elapsed time
         if success:
-            fd.write('\nConverged in %.2f seconds' % et)
+            fd.write('\nPower flow converged!')
         else:
-            fd.write('\nDid not converge (%.2f seconds)\n' % et)
+            fd.write('\nPower flow did not converge!')
 
         ## objective function value
         if isOPF:

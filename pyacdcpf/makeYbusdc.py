@@ -76,8 +76,8 @@ def makeYbusdc(busdc, branchdc, convdcdc=None):
 
             Y_ff = 1 / R
             Y_ft = - D / R
-            Y_tf = D ** 2 / R + G
-            Y_tt = - D / R
+            Y_tf = - D / R
+            Y_tt = D ** 2 / R + G
 
             # Add to Ybusdc
             for i in range(active.size):

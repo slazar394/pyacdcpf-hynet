@@ -1,5 +1,3 @@
-"""Converts external to internal bus numbering.
-"""
 import sys
 
 from numpy import where, setdiff1d, unique, r_, arange, zeros
@@ -22,11 +20,11 @@ def ext2intac(pdc,ppc):
     buses are grouped at the end.
 
     @author:Jef Beerten (KU Leuven)
-    @author:Roni Irnawan (Aalborg University)    
+    @author:Roni Irnawan (Aalborg University)
     """
 
     ##-----  rename ac bus numbers  -----
-    ## check presence of converter station on ac busses
+    ## check presence of converter station on ac buses
     acdum_i = where(pdc['busdc'][:,BUSAC_I] == 0)[0]
     accnv_i = where(pdc['busdc'][:,BUSAC_I] )[0]
     accnv = pdc['busdc'][accnv_i,BUSAC_I]
@@ -34,12 +32,12 @@ def ext2intac(pdc,ppc):
     acdum = acnocnv[:acdum_i.shape[0]]
     acnodum = acnocnv[acdum_i.shape[0]:]
 
-    ## check presence of multiple converters on ac busses
+    ## check presence of multiple converters on ac buses
     if accnv.shape[0] != unique(accnv).shape[0] :
         sys.stderr.write('More than one converter per ac node detected!\n')
 
     ## define index matrices
-    i2eac = r_[accnv,acdum,acnodum].astype(int)
+    i2eac = r_[unique(accnv), acdum, acnodum].astype(int)
     e2iac = zeros(max(i2eac) + 1)
     e2iac[i2eac] = arange(1,ppc['bus'].shape[0]+1)
     i2eac = r_[[0],i2eac]

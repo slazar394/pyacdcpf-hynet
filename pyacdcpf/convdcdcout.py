@@ -1,72 +1,43 @@
-"""Remove DC-DC converters facing outages from converter matrix.
-"""
-
-from sys import stdout, stderr
-
-from numpy import array, where
-
 from pyacdcpf.idx_convdcdc import (STATUS_DCDC, PC_DCDC, PM_DCDC, PLOSS_DCDC)
+
+import numpy as np
 
 
 def convdcdcout(pdc):
     """
-    Remove DC-DC converters facing outages from converter matrix.
+    This function checks the status of each DC/DC converter and splits the convdcdc
+    array to two arrays:
 
-    The DC-DC converter matrix is split into working (convdcdc1) and non-working
-    (convdcdc0) converter matrices. Powers and currents are reset to zero for
-    converters with outages.
+        - convdcdc0, which contains the out-of-service converters and
+        - convdcdc1, which contains the in-service converters.
 
-    Parameters
-    ----------
-    pdc : dict
-        DC power flow case structure containing 'convdcdc' matrix
+    The function also returns indices of out-of-service (convdcdc0i) and in-service (convdcdc1i) converters
+    in the original convdcdc matrix.
 
-    Returns
-    -------
-    pdc : dict
-        Modified DC case structure
-    convdcdc1 : array
-        Working DC-DC converters (status = 1)
-    convdcdc1i : array
-        Indices of working DC-DC converters
-    convdcdc0 : array
-        Non-working DC-DC converters (status = 0)
-    convdcdc0i : array
-        Indices of non-working DC-DC converters
-
-    Notes
-    -----
-    Unlike AC-DC converters, DC-DC converters don't have AC bus connections,
-    so no busdc matrix modification is needed.
-
-    @author: Based on convout() by Jef Beerten (KU Leuven)
+    @author: Lazar Scekic (University of Montenegro)
     """
 
-    ## Check if convdcdc exists in pdc
+    # Check if DC-DC converters exist in the system
     if 'convdcdc' not in pdc or pdc['convdcdc'] is None or pdc['convdcdc'].size == 0:
-        ## No DC-DC converters in the system
-        return pdc, array([]), array([]), array([]), array([])
+        return pdc, np.array([]), np.array([]), np.array([]), np.array([])
 
-    ## DC-DC converter status validity check
-    if ((pdc['convdcdc'][:, STATUS_DCDC] < 0).any()
-            or (pdc['convdcdc'][:, STATUS_DCDC] > 1).any()):
-        stderr.write('DC-DC converter status flags must be either 0 or 1\n')
+    # Check if converter status flags are valid
+    if (pdc['convdcdc'][:, STATUS_DCDC] < 0).any() or (pdc['convdcdc'][:, STATUS_DCDC] > 1).any():
+        raise Exception('DC/DC converter status flags must be either 0 or 1.\n')
 
-    ## Define indices
-    convdcdc0i = where(pdc['convdcdc'][:, STATUS_DCDC] == 0)[0]
-    convdcdc1i = where(pdc['convdcdc'][:, STATUS_DCDC] == 1)[0]
+    # Find the indices of out-of-service (convdcdc0i) and in-service (convdcdc1i) converters
+    convdcdc0i = np.where(pdc['convdcdc'][:, STATUS_DCDC] == 0)[0]
+    convdcdc1i = np.where(pdc['convdcdc'][:, STATUS_DCDC] == 1)[0]
 
-    ## Define converter outage matrix
+    # Extract parts of convdcdc array corresponding to out-of-service (convdcdc0) and in-service (convdcdc1) converters
     convdcdc0 = pdc['convdcdc'][convdcdc0i, :]
     convdcdc1 = pdc['convdcdc'][convdcdc1i, :]
 
-    ## Reset DC-DC converter powers and currents for outages
-    ## (only if power flow results columns exist)
+    # Reset power flow results for out-of-service DC-DC converters
     if convdcdc0.shape[1] > PC_DCDC:
-        convdcdc0[:, PC_DCDC] = 0.  # Power at from bus
-        convdcdc0[:, PM_DCDC] = 0.  # Power at to bus
+        convdcdc0[:, PC_DCDC] = 0.
+        convdcdc0[:, PM_DCDC] = 0.
+        convdcdc0[:, PLOSS_DCDC] = 0.
 
-    if convdcdc0.shape[1] > PLOSS_DCDC:
-        convdcdc0[:, PLOSS_DCDC] = 0.  # Losses
-
+    # Return the results
     return pdc, convdcdc1, convdcdc1i, convdcdc0, convdcdc0i

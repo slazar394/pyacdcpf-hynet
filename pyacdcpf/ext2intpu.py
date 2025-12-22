@@ -1,61 +1,60 @@
-"""Converts external per unit inputs to internal values.
-"""
-import sys
-
-from numpy import where
-
 from pyacdcpf.idx_busdc import BASE_KVDC, CDC
 from pyacdcpf.idx_convdc import RTF, XTF, BF, RCONV, XCONV, ICMAX
 from pyacdcpf.idx_brchdc import F_BUSDC, T_BUSDC, BRDC_R, BRDC_L, BRDC_C
 
-def ext2intpu(baseMVA,pdc):
+import numpy as np
+
+
+def ext2intpu(baseMVA, pdc):
     """
-    Converts external per unit inputs to internal values.
-    
-    Converts external per unit quantities of the dc bus, converter and
-    branch matrix into internal per unit quantities using the ac
-    power network base.
+    This function converts external per unit quantities to internal values using
+    AC system base.
 
-    @author:Jef Beerten (KU Leuven)
-    @author:Roni Irnawan (Aalborg University)    
+    It converts DC system per-unit quantities from their respective bases
+    (baseMVAac for AC converter side, baseMVAdc for DC side) to the
+    unified AC system base (baseMVA).
+
+    Conversion rules:
+    - Impedances: Z_new = Z_old × (S_base_new / S_base_old)
+    - Admittances: Y_new = Y_old × (S_base_old / S_base_new)
+    - Currents: I_new = I_old × (S_base_old / S_base_new)
+
+    @author: Jef Beerten (KU Leuven)
+    @author: Roni Irnawan (Aalborg University)
+    @author: Lazar Scekic (University of Montenegro)
     """
 
-    ##-----  per unit conversion  -----
-    ## Only p.u. impedances and currents are changed. Voltages (p.u.) and
-    ## powers (real values) are left unaltered.
+    # Extract base power values
+    ac_converter_base = pdc['baseMVAac']
+    dc_base = pdc['baseMVAdc']
 
-    ## converter ac side conversion
-    baseMVAac = pdc['baseMVAac']
-    pdc['convdc'][:,RTF] *= baseMVA/baseMVAac
-    pdc['convdc'][:,XTF] *= baseMVA/baseMVAac
-    pdc['convdc'][:,BF] *= baseMVA/baseMVAac
-    pdc['convdc'][:,RCONV] *= baseMVA/baseMVAac
-    pdc['convdc'][:,XCONV] *= baseMVA/baseMVAac
-    pdc['convdc'][:,ICMAX] *= baseMVAac/baseMVA
+    # Calculate conversion ratios
+    impedance_ac_ratio = baseMVA / ac_converter_base
+    admittance_ac_ratio = ac_converter_base / baseMVA
+    impedance_dc_ratio = baseMVA / dc_base
+    admittance_dc_ratio = dc_base / baseMVA
 
-    ## ==> dc side per unit convention
-    ## basekAdc = baseMVAdc/basekVdc
-    ## baseRdc  = basekVdc^2/baseMVAdc
+    # Convert AC converter side quantities to system MVA base
+    pdc['convdc'][:, RTF] *= impedance_ac_ratio
+    pdc['convdc'][:, XTF] *= impedance_ac_ratio
+    pdc['convdc'][:, RCONV] *= impedance_ac_ratio
+    pdc['convdc'][:, XCONV] *= impedance_ac_ratio
+    pdc['convdc'][:, BF] *= admittance_ac_ratio
+    pdc['convdc'][:, ICMAX] *= admittance_ac_ratio
 
-    ## converter dc side conversion
-    baseMVAdc = pdc['baseMVAdc']
-    baseR_busdc = pdc['busdc'][:,BASE_KVDC]**2/baseMVAdc
-    baseR_busdc2ac = pdc['busdc'][:,BASE_KVDC]**2/baseMVA
-    pdc['busdc'][:,CDC] *= 1/baseR_busdc*baseR_busdc2ac
+    ## Convert DC converter side quantities to system MVA base
+    pdc['busdc'][:, CDC] *= admittance_dc_ratio
 
-    ## dc network branch conversion
-    ## Check for equal base voltages at two sides of a dc branch
-    Vff = pdc['busdc'][where(pdc['branchdc'][:,F_BUSDC])[0],BASE_KVDC]
-    Vtt = pdc['busdc'][where(pdc['branchdc'][:,T_BUSDC])[0],BASE_KVDC]
+    # Check for matching base voltages at branch ends
+    from_bus_voltage = pdc['busdc'][np.where(pdc['branchdc'][:,F_BUSDC])[0],BASE_KVDC]
+    to_bus_voltage = pdc['busdc'][np.where(pdc['branchdc'][:,T_BUSDC])[0],BASE_KVDC]
 
-    if not all(Vff==Vtt):
-        sys.stderr.write('The dc voltages at both sides of a dc branch do not match.\n')
+    if not np.all(from_bus_voltage == to_bus_voltage):
+        raise Exception('The DC voltages at both sides of a DC branch do not match.\n')
 
-    baseKVDC_brch = pdc['busdc'][F_BUSDC,BASE_KVDC]
-    baseR_brchdc = baseKVDC_brch**2/baseMVAdc
-    baseR_brchdc2ac = baseKVDC_brch**2/baseMVA
-    pdc['branchdc'][:,BRDC_R] *= baseR_brchdc/baseR_brchdc2ac
-    pdc['branchdc'][:,BRDC_L] *= baseR_brchdc/baseR_brchdc2ac
-    pdc['branchdc'][:,BRDC_C] *= baseR_brchdc/baseR_brchdc2ac
+    # Convert DC branch quantities to system MVA base
+    pdc['branchdc'][:, BRDC_R] *= impedance_dc_ratio
+    pdc['branchdc'][:, BRDC_L] *= impedance_dc_ratio
+    pdc['branchdc'][:, BRDC_C] *= admittance_dc_ratio
 
     return pdc

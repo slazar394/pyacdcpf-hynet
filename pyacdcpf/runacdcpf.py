@@ -1,6 +1,5 @@
 """RUNACDCPF  Runs a sequential ac/dc power flow.
 """
-
 from sys import stdout, stderr
 
 from os.path import dirname, join
@@ -35,6 +34,7 @@ from pyacdcpf.convout import convout
 from pyacdcpf.convdcdcout import convdcdcout
 from pyacdcpf.brchdcout import brchdcout
 from pyacdcpf.brchout import brchout
+from pyacdcpf.genout import genout
 from pyacdcpf.ext2intdc import ext2intdc
 from pyacdcpf.ext2intac import ext2intac
 from pyacdcpf.ext2intpu import ext2intpu
@@ -97,33 +97,28 @@ def runacdcpf(caseac=None, casedc=None, pacdcopt=None, ppopt=None):
 		'case5_stagg_MTDCdroop');
 
     @author:Jef Beerten (KU Leuven)
-    @author:Roni Irnawan (Aalborg University)    
+    @author:Roni Irnawan (Aalborg University)
+    @author: Lazar Scekic (University of Montenegro)
     """
+    
+    # Check if AC and DC cases are provided
+    if caseac is None and casedc is None:
+        # Raise an exception if both DC and AC systems missing
+        raise Exception('Either DC or AC system must be defined.')
+    else:
+        # Load the AC and DC test systems
+        ppc = loadcase(caseac)
+        pdc = loadcasedc(casedc)
 
-    ## start of time calculation
-    t0 = time()
+    # Set PyACDC options
+    pacdcopt = pacdcoption(pacdcopt)
 
-    ## add subdirectories to path
-    if caseac is None:
-        dirac = join(dirname(__file__), 'Cases', 'PowerflowAC')
-        caseac = join(dirac, 'case5_stagg')
-        # caseac = join(dirac, 'case3_inf')
-        # caseac = join(dirac, 'case24_ieee_rts1996_3zones')
-        # caseac = join(dirac, 'case24_ieee_rts1996_3zones_inf')
-    if casedc is None:
-        dirdc = join(dirname(__file__), 'Cases', 'PowerflowDC')
-        # casedc = join(dirdc, 'case5_stagg_HVDCptp')
-        # casedc = join(dirdc, 'case5_stagg_MTDCslack')
-        casedc = join(dirdc, 'case5_stagg_MTDCdroop')
-        # casedc = join(dirdc, 'case24_ieee_rts1996_MTDC')
-
-    ## default arguments
+    # Define pypower options
     ppopt = ppoption(ppopt)
     ppopt["VERBOSE"] = 0
     ppopt["OUT_ALL"] = 0
-    pacdcopt = pacdcoption(pacdcopt)
 
-    ## options
+    # Extract the main options
     tolacdc = pacdcopt["TOLACDC"]
     itmaxacdc = pacdcopt["ITMAXACDC"]
     toldc = pacdcopt["TOLDC"]
@@ -133,66 +128,60 @@ def runacdcpf(caseac=None, casedc=None, pacdcopt=None, ppopt=None):
     tolslackdroopint = pacdcopt["TOLSLACKDROOPINT"]
     itmaxslackdroopint = pacdcopt["ITMAXSLACKDROOPINT"]
     multslack = pacdcopt["MULTSLACK"]
-
     limac = pacdcopt["LIMAC"]
     limdc = pacdcopt["LIMDC"]
     tollim = pacdcopt["TOLLIM"]
-
     output = pacdcopt["OUTPUT"]
     convplotopt = pacdcopt["CONVPLOTOPT"]
 
-    ## -----  initialise  -----
-    ## read data
-    pdc = loadcasedc(casedc)
-    ppc = loadcase(caseac)
-
-    ##-----  Data preparation -----
-    ## converter outage are considered as stations without ac grid connection
+    # Remove out-of-service AC-DC converters from the system
     pdc, conv0busi, conv1, conv1i, conv0, conv0i = convout(pdc)
-    pdc['convdc'] = conv1 # only use converters without outage
+    pdc['convdc'] = conv1
 
-    ## Handle DC-DC converter outages (NEW)
+    # Remove out-of-service DC-DC converters from the system
     pdc, convdcdc1, convdcdc1i, convdcdc0, convdcdc0i = convdcdcout(pdc)
-    pdc['convdcdc'] = convdcdc1  # Only use working DC-DC converters
+    pdc['convdcdc'] = convdcdc1
 
-    ## dc branch outages (remove branches from input data)
+    # Remove out-of-service DC branches from the system
     brchdc1, brchdc1i, brchdc0, brchdc0i = brchdcout(pdc)
-    pdc['branchdc'] = brchdc1 # only include branches in operation
+    pdc['branchdc'] = brchdc1
 
-    ## ac branch outages (remove branches from input data)
+    # Remove out-of-service AC branches from the system
     brch1, brch1i, brch0, brch0i = brchout(ppc)
-    ppc['branch'] = brch1 # only include branches in operation
+    ppc['branch'] = brch1 
 
-    ## generator outages (remove non-operational generators from input data)
-    gon = where(ppc['gen'][:,GEN_STATUS] > 0)[0]   # which gens are on?
-    goff = where(ppc['gen'][:,GEN_STATUS] == 0)[0] # which gens are off?
-    gen0 = ppc['gen'][goff,:] # non-operational gens data
-    ppc['gen'] = ppc['gen'][gon,:] #keep operational generators"
+    # Remove out of service generators from the system
+    gen1, gen1i, gen0, gen0i = genout(ppc)
+    ppc['gen'] = gen1
 
-    ##-----  External to internal numbering  -----
-    ## dc network external to internal bus numbering
+    # DC network external to internal bus numbering
     i2edcpmt, i2edc, pdc = ext2intdc(pdc)
 
-    ## ac network external to internal bus numbering
+    # AC network external to internal bus numbering
     acdmbus, i2eac, pdc, ppc = ext2intac(pdc,ppc)
 
-    ## sort matrices by new bus numbers
-    i2ebus    = ppc['bus'][:,0].argsort()
-    i2egen    = ppc['gen'][:,0].argsort()
-    i2ebrch   = ppc['branch'][:,0].argsort()
-    i2ebusdc  = pdc['busdc'][:,0].argsort()
-    i2econvdc = pdc['convdc'][:,0].argsort()
+    # Sort matrices by new bus numbers
+    i2ebus = ppc['bus'][:,0].argsort()
+    i2egen = ppc['gen'][:,0].argsort()
+    i2ebrch = ppc['branch'][:,0].argsort()
+    i2ebusdc = pdc['busdc'][:,0].argsort()
     i2ebrchdc = pdc['branchdc'][:,0].argsort()
+    i2econvdc = pdc['convdc'][:,0].argsort()
+    
+    if pdc['convdcdc'].shape[0] > 0:
+        i2econvdcdc = pdc['convdcdc'][:,0].argsort()
+        pdc['convdcdc'] = pdc['convdcdc'][i2econvdcdc,:]
 
+    # Update the AC and DC system structures
     ppc['bus'] = ppc['bus'][i2ebus,:]
     ppc['gen'] = ppc['gen'][i2egen,:]
     ppc['branch'] = ppc['branch'][i2ebrch,:]
     pdc['busdc'] = pdc['busdc'][i2ebusdc,:]
-    pdc['convdc'] = pdc['convdc'][i2econvdc,:]
     pdc['branchdc'] = pdc['branchdc'][i2ebrchdc,:]
+    pdc['convdc'] = pdc['convdc'][i2econvdc,:]
 
-    ## Per unit external to internal data conversion
-    pdc = ext2intpu(ppc['baseMVA'],pdc)
+    # Per unit external to internal data conversion
+    pdc = ext2intpu(ppc['baseMVA'], pdc)
 
     ##-----  Additional data preparation & index initialisation  -----
     ## zero rows addition to convdc matrix (dc buses without converter)
@@ -649,8 +638,6 @@ def runacdcpf(caseac=None, casedc=None, pacdcopt=None, ppopt=None):
         ## convergence check
         if abs(Ps_old - Ps).max() < tolacdc:
             converged = 1
-    ## end of iteration
-    timecalc = time() - t0
 
     ##-----  Post processing  -----
     ## convergence
@@ -736,9 +723,9 @@ def runacdcpf(caseac=None, casedc=None, pacdcopt=None, ppopt=None):
     ## generator outage inclusion
     gen1 = ppc['gen'] ## operational generators
     gen0[:,[PG, QG]] = 0 ## reset generator power injection
-    ppc['gen'] = zeros((gon.shape[0]+goff.shape[0], gen1.shape[1]));
-    ppc['gen'][gon,:] = gen1 ## include operational generators
-    ppc['gen'][goff,:]  = gen0 ## include non-operational generators
+    ppc['gen'] = zeros((gen1.shape[0]+gen0.shape[0], gen1.shape[1]))
+    ppc['gen'][gen1i,:] = gen1
+    ppc['gen'][gen0i,:] = gen0
 
     ## converter with outages inclusion
     conv1 = pdc['convdc']
@@ -777,7 +764,7 @@ def runacdcpf(caseac=None, casedc=None, pacdcopt=None, ppopt=None):
     ##-----  output results  -----
     ## print results
     if output:
-        printpf(ppc['baseMVA'], ppc['bus'], ppc['gen'], ppc['branch'],None,converged,timecalc)
+        printpf(ppc['baseMVA'], ppc['bus'], ppc['gen'], ppc['branch'],None,converged)
         printdcpf(pdc['busdc'], pdc['convdc'], pdc['branchdc'])
 
     ##-----  output results  -----
@@ -796,7 +783,7 @@ def runacdcpf(caseac=None, casedc=None, pacdcopt=None, ppopt=None):
     resultsdc['convdc'] = convdc
     resultsdc['branchdc'] = branchdc
 
-    return resultsac, resultsdc, converged, timecalc
+    return resultsac, resultsdc, converged
 
 if __name__ == '__main__':
-    resultsac, resultsdc, converged, timecalc =runacdcpf()
+    resultsac, resultsdc, converged =runacdcpf()

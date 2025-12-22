@@ -75,7 +75,7 @@ def zonecheck(bus, gen, branch, i2eac, output):
 
     ## check  for a generator for every slack bus
     if not nogenslack.size == 0:
-        print('\nAC slack bus without generator at bus %d.\n', i2eac[nogenslack])
+        print('\nAC slack bus without generator at bus %s.\n' % (i2eac[nogenslack.astype(int)],))
         print('Add a generator for every AC slack bus!')
 
 
@@ -84,7 +84,7 @@ def zonecheck(bus, gen, branch, i2eac, output):
     tbusinf = intersect1d(branch[:,T_BUS], acinf)
     brchinf = r_[fbusinf, tbusinf]
     if not brchinf.size == 0:
-        print('\n Connection with an infinite bus at bus %d.\n', i2eac[brchinf])
+        print('\n Connection with an infinite bus at bus %s.\n' % (i2eac[brchinf.astype(int)],))
         print('Remove connections to infinite buses!')
 
 

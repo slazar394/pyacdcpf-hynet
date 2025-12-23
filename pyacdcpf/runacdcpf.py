@@ -768,20 +768,20 @@ def runacdcpf(caseac=None, casedc=None, pacdcopt=None, ppopt=None):
         printdcpf(pdc['busdc'], pdc['convdc'], pdc['branchdc'])
 
     ##-----  output results  -----
-    # as dict
+    # as dict - use ppc/pdc which have proper external bus numbering
     resultsac = {}
-    resultsac['baseMVA'] = baseMVA
-    resultsac['bus'] = bus
-    resultsac['gen'] = gen
-    resultsac['branch'] = branch
+    resultsac['baseMVA'] = ppc['baseMVA']
+    resultsac['bus'] = ppc['bus']
+    resultsac['gen'] = ppc['gen']
+    resultsac['branch'] = ppc['branch']
 
     resultsdc = {}
-    resultsdc['baseMVAac'] = baseMVAac
-    resultsdc['baseMVAdc'] = baseMVAdc
-    resultsdc['pol'] = pol
-    resultsdc['busdc'] = busdc
-    resultsdc['convdc'] = convdc
-    resultsdc['branchdc'] = branchdc
+    resultsdc['baseMVAac'] = pdc['baseMVAac']
+    resultsdc['baseMVAdc'] = pdc['baseMVAdc']
+    resultsdc['pol'] = pdc['pol']
+    resultsdc['busdc'] = pdc['busdc']
+    resultsdc['convdc'] = pdc['convdc']
+    resultsdc['branchdc'] = pdc['branchdc']
 
     return resultsac, resultsdc, converged
 

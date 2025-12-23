@@ -31,10 +31,10 @@ def case5_stagg_HVDCptp():
     ])
 
     ## DC converter data
-    #   busdc_i type_dc type_ac P_g   Q_g   Vtar    rtf     xtf     bf     rc     xc     basekVac    Vmmax   Vmmin   Imax    status   LossA LossB  LossCrec LossCinv  
+    #   busdc_i type_dc type_ac P_g   Q_g   Vtar    rtf     xtf     bf     rc     xc     basekVac    Vmmax   Vmmin   Imax    status   LossA LossB  LossCrec LossCinv
     pdc["convdc"] = array([
-        [1,      1,      1,      -60,   -40,   1,    0.0015, 0.1121, 0.0887,0.0001,  0.16428, 345,        1.1,    0.9,    1.1,    1,      1.103,0.887, 2.885,   4.371],
-        [2,      2,      2,      0  ,    0 ,   1,    0.0015, 0.1121, 0.0887,0.0001,  0.16428, 345,        1.1,    0.9,    1.1,    1,      1.103,0.887, 2.885,   4.371]
+        [1,      1,      1,      -60,   -40,   1,    0.0015, 0.1121, 0.0887,0.0001,  0.16428, 345,        1.1,    0.9,    1.2,    1,      1.103,0.887, 2.885,   4.371],
+        [2,      2,      2,      0  ,    0 ,   1,    0.0015, 0.1121, 0.0887,0.0001,  0.16428, 345,        1.1,    0.9,    1.2,    1,      1.103,0.887, 2.885,   4.371]
     ])
 
     ## DC branch data
